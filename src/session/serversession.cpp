@@ -17,6 +17,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+
 #include "serversession.h"
 #include "proto/trojanrequest.h"
 #include "proto/udppacket.h"
@@ -50,8 +54,25 @@ void ServerSession::start() {
         if (error) {
             Log::log_with_endpoint(in_endpoint, "SSL handshake failed: " + error.message(), Log::ERROR);
             if (error.message() == "http request" && !plain_http_response.empty()) {
-                recv_len += plain_http_response.length();
-                boost::asio::async_write(accept_socket(), boost::asio::buffer(plain_http_response), [this, self](const boost::system::error_code, size_t) {
+                
+                std::time_t current_time = std::time(nullptr);
+                std::tm* tm = std::gmtime(&current_time);
+
+                std::ostringstream date_stream;
+                date_stream << std::put_time(tm, "%a, %d %b %Y %H:%M:%S GMT");
+                std::string current_time_str = date_stream.str();
+
+                std::string modified_response = plain_http_response;
+
+                std::string::size_type pos = modified_response.find("$");
+                if (pos != std::string::npos) {
+                    modified_response.replace(pos, 1, current_time_str);
+                } else {
+                    Log::log_with_endpoint(in_endpoint, "Date header not found $ in the response." + error.message(), Log::ERROR);
+                }
+
+                recv_len += modified_response.length();
+                boost::asio::async_write(accept_socket(), boost::asio::buffer(modified_response), [this, self](const boost::system::error_code, size_t) {
                     destroy();
                 });
                 return;
