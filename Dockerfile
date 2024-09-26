@@ -1,4 +1,4 @@
-FROM alpine:3.15
+FROM alpine:3.17
 
 RUN apk add --no-cache --virtual .build-deps \
         build-base \
@@ -18,8 +18,6 @@ RUN cd /trojan && cmake . && make -j$(nproc) && strip -s trojan \
     && apk del .build-deps
 
 WORKDIR /config
-
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD trojan --check || exit 1
 
 CMD ["trojan", "config.json"]
 
