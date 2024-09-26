@@ -53,7 +53,7 @@ void ServerSession::start() {
     in_socket.async_handshake(stream_base::server, [this, self](const boost::system::error_code error) {
         if (error) {
             Log::log_with_endpoint(in_endpoint, "SSL handshake failed: " + error.message(), Log::ERROR);
-            if (error.message() == "http request" && !plain_http_response.empty()) {
+            if (error.message().find("http request") != std::string::npos && !plain_http_response.empty()) {
                 
                 std::time_t current_time = std::time(nullptr);
                 std::tm* tm = std::gmtime(&current_time);
