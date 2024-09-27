@@ -20,6 +20,7 @@
 #ifndef _SESSION_H_
 #define _SESSION_H_
 
+#include <sstream>
 #include <ctime>
 #include <memory>
 #include <boost/asio/io_context.hpp>
