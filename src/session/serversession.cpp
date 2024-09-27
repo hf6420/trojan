@@ -17,10 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <ctime>
-#include <iomanip>
-#include <sstream>
-
 #include "serversession.h"
 #include "proto/trojanrequest.h"
 #include "proto/udppacket.h"
