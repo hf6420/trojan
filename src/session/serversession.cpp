@@ -196,7 +196,7 @@ void ServerSession::in_recv(const string &data) {
         resolver.async_resolve(query_addr, query_port, [this, self, query_addr, query_port](const boost::system::error_code error, const tcp::resolver::results_type& results) {
             if (error || results.empty()) {
                 Log::log_with_endpoint(in_endpoint, "cannot resolve remote server hostname " + query_addr + ": " + error.message(), Log::ERROR);
-                //destroy();
+                destroy();
                 return;
             }
 
@@ -214,8 +214,8 @@ void ServerSession::in_recv(const string &data) {
             boost::system::error_code ec;
             out_socket.open(iterator->endpoint().protocol(), ec);
             if (ec) {
-		Log::log_with_endpoint(in_endpoint, "out_socket.open error : "  + ec.message(), Log::ERROR);
-                //destroy();
+                Log::log_with_endpoint(in_endpoint, "out_socket.open error : "  + ec.message(), Log::ERROR);
+                destroy();
                 return;
             }
 
@@ -233,7 +233,7 @@ void ServerSession::in_recv(const string &data) {
             out_socket.async_connect(*iterator, [this, self, query_addr, query_port](const boost::system::error_code error) {
                 if (error) {
                     Log::log_with_endpoint(in_endpoint, "cannot establish connection to remote server " + query_addr + ':' + query_port + ": " + error.message(), Log::ERROR);
-                    //destroy();
+                    destroy();
                     return;
                 }
                 Log::log_with_endpoint(in_endpoint, "tunnel established");
