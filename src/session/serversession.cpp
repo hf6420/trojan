@@ -153,6 +153,7 @@ void ServerSession::in_recv(const string &data) {
     if (status == HANDSHAKE) {
         TrojanRequest req;
         bool valid = req.parse(data) != -1;
+		
         if (valid) {
             auto password_iterator = config.password.find(req.password);
             if (password_iterator == config.password.end()) {
@@ -169,20 +170,10 @@ void ServerSession::in_recv(const string &data) {
                 Log::log_with_endpoint(in_endpoint, "valid trojan request structure but possibly incorrect password (" + req.password + ')', Log::WARN);
             }
         }
+		
         string query_addr = valid ? req.address.address : config.remote_addr;
-        string query_port = to_string([&]() {
-            if (valid) {
-                return req.address.port;
-            }
-            const unsigned char *alpn_out;
-            unsigned int alpn_len;
-            SSL_get0_alpn_selected(in_socket.native_handle(), &alpn_out, &alpn_len);
-            if (alpn_out == nullptr) {
-                return config.remote_port;
-            }
-            auto it = config.ssl.alpn_port_override.find(string(alpn_out, alpn_out + alpn_len));
-            return it == config.ssl.alpn_port_override.end() ? config.remote_port : it->second;
-        }());
+        string query_port = to_string(valid ? req.address.port : config.remote_port);
+		
         if (valid) {
             out_write_buf = req.payload;
             if (req.command == TrojanRequest::UDP_ASSOCIATE) {
@@ -198,37 +189,38 @@ void ServerSession::in_recv(const string &data) {
             Log::log_with_endpoint(in_endpoint, "not trojan request, connecting to " + query_addr + ':' + query_port, Log::WARN);
             out_write_buf = data;
         }
+
         sent_len += out_write_buf.length();
         auto self = shared_from_this();
+
         resolver.async_resolve(query_addr, query_port, [this, self, query_addr, query_port](const boost::system::error_code error, const tcp::resolver::results_type& results) {
             if (error || results.empty()) {
                 Log::log_with_endpoint(in_endpoint, "cannot resolve remote server hostname " + query_addr + ": " + error.message(), Log::ERROR);
                 destroy();
                 return;
             }
+
             auto iterator = results.begin();
             if (config.tcp.prefer_ipv4) {
                 for (auto it = results.begin(); it != results.end(); ++it) {
-                    const auto &addr = it->endpoint().address();
-                    if (addr.is_v4()) {
+                    if (it->endpoint().address().is_v4()) {
                         iterator = it;
                         break;
                     }
                 }
             }
             Log::log_with_endpoint(in_endpoint, query_addr + " is resolved to " + iterator->endpoint().address().to_string(), Log::ALL);
+
             boost::system::error_code ec;
             out_socket.open(iterator->endpoint().protocol(), ec);
             if (ec) {
                 destroy();
                 return;
             }
-            if (config.tcp.no_delay) {
-                out_socket.set_option(tcp::no_delay(true));
-            }
-            if (config.tcp.keep_alive) {
-                out_socket.set_option(boost::asio::socket_base::keep_alive(true));
-            }
+
+            if (config.tcp.no_delay) out_socket.set_option(tcp::no_delay(true));
+            if (config.tcp.keep_alive) out_socket.set_option(boost::asio::socket_base::keep_alive(true));
+
 #ifdef TCP_FASTOPEN_CONNECT
             if (config.tcp.fast_open) {
                 using fastopen_connect = boost::asio::detail::socket_option::boolean<IPPROTO_TCP, TCP_FASTOPEN_CONNECT>;
@@ -236,6 +228,7 @@ void ServerSession::in_recv(const string &data) {
                 out_socket.set_option(fastopen_connect(true), ec);
             }
 #endif // TCP_FASTOPEN_CONNECT
+
             out_socket.async_connect(*iterator, [this, self, query_addr, query_port](const boost::system::error_code error) {
                 if (error) {
                     Log::log_with_endpoint(in_endpoint, "cannot establish connection to remote server " + query_addr + ':' + query_port + ": " + error.message(), Log::ERROR);
