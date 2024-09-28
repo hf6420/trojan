@@ -214,7 +214,7 @@ void ServerSession::in_recv(const string &data) {
             boost::system::error_code ec;
             out_socket.open(iterator->endpoint().protocol(), ec);
             if (ec) {
-		Log::log_with_endpoint(in_endpoint, "ec " + ": " + ec, Log::ERROR);
+		Log::log_with_endpoint(in_endpoint, "out_socket.open error : "  + ec.message(), Log::ERROR);
                 //destroy();
                 return;
             }
