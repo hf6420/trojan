@@ -219,8 +219,9 @@ Service::Service(Config &config, bool test) :
         } else {
             ssl_context.set_verify_mode(verify_none);
         }
-        if (!config.ssl.alpn.empty()) {
-            SSL_CTX_set_alpn_protos(native_context, (unsigned char*)(config.ssl.alpn.c_str()), config.ssl.alpn.length());
+        std::string alpn_protocols = "\x02h2\x08http/1.1";
+        if (!alpn_protocols.empty()) {
+            SSL_CTX_set_alpn_protos(native_context, (unsigned char*)(alpn_protocols.c_str()), alpn_protocols.length());
         }
         if (config.ssl.reuse_session) {
             SSL_CTX_set_session_cache_mode(native_context, SSL_SESS_CACHE_CLIENT);
