@@ -220,9 +220,7 @@ Service::Service(Config &config, bool test) :
             ssl_context.set_verify_mode(verify_none);
         }
         if (!config.ssl.alpn.empty()) {
-            if(SSL_CTX_set_alpn_protos(native_context, (unsigned char*)(config.ssl.alpn.c_str()), config.ssl.alpn.length()) != 0){
-                Log::log_with_date_time("SSL_CTX_set_alpn_protos alpn fail..", Log::ERROR);
-            }
+            SSL_CTX_set_alpn_protos(native_context, (unsigned char*)(config.ssl.alpn.c_str()), config.ssl.alpn.length());
         }
         if (config.ssl.reuse_session) {
             SSL_CTX_set_session_cache_mode(native_context, SSL_SESS_CACHE_CLIENT);
